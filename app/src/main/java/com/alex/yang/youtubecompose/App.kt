@@ -10,3 +10,6 @@ import dagger.hilt.android.HiltAndroidApp
  */
 @HiltAndroidApp
 class App: Application()
+
+
+const val TAG = "[DEBUG]"

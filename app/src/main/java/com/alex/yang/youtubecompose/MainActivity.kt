@@ -11,6 +11,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.alex.yang.youtubecompose.presentation.VideoScreen
+import com.alex.yang.youtubecompose.presentation.VideoViewModel
 import com.alex.yang.youtubecompose.ui.theme.AlexYoutubeComposeTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -21,7 +24,11 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             AlexYoutubeComposeTheme {
+                val viewModel = hiltViewModel<VideoViewModel>()
 
+                VideoScreen(
+                    onEvent = viewModel::onEvent
+                )
             }
         }
     }
