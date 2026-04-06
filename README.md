@@ -1,5 +1,9 @@
 # Android YouTube Player Compose
 
+## Docs
+
+- Architecture and flow: [docs/youtube-player-architecture.vi.md](docs/youtube-player-architecture.vi.md)
+
 ## Giới thiệu dự án
 
 Dự án này là một **ứng dụng phát YouTube trên Android**, tích hợp **PierfrancescoSoffritti YouTube Player Library**, trình bày đầy đủ:
