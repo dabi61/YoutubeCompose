@@ -34,24 +34,22 @@ import com.alex.yang.youtubecompose.player.PlayerController
 import com.alex.yang.youtubecompose.ui.theme.AlexYoutubeComposeTheme
 
 /**
- * Created by AlexYang on 2026/1/26.
- *
- *
+ * Playback progress slider and time labels.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlayerSlider(
     controller: PlayerController,
 ) {
-    // ========== 訂閱播放狀態 ==========
+    // Subscribe to playback progress.
     val currentSecond by controller.currentSecond.collectAsStateWithLifecycle()
     val duration by controller.duration.collectAsStateWithLifecycle()
 
-    // ========== Seeking 狀態 ==========
+    // Local state while the user is dragging the thumb.
     var isSeeking by remember { mutableStateOf(false) }
     var seekPosition by remember { mutableFloatStateOf(0f) }
 
-    // ========== 計算顯示值 ==========
+    // Values currently shown by the slider.
     val displayValue = if (isSeeking) seekPosition else currentSecond
     val maxValue = if (duration > 0f) duration else 100f
 
@@ -61,7 +59,7 @@ fun PlayerSlider(
             .padding(horizontal = 8.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        // 進度條
+        // Progress slider.
         Slider(
             modifier = Modifier
                 .fillMaxWidth()
@@ -74,7 +72,7 @@ fun PlayerSlider(
                 disabledActiveTrackColor = Color(0XFFFBC92B),
                 disabledInactiveTrackColor = Color.Gray
             ),
-            // 自訂 Thumb（立體感）
+            // Custom thumb with a small raised effect.
             thumb = {
                 Box(
                     modifier = Modifier
@@ -127,13 +125,13 @@ fun PlayerSlider(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            // 當前時間
+            // Current playback time.
             Text(
                 color = Color.White,
                 text = formatSecond(displayValue)
             )
 
-            // 總時長
+            // Total duration.
             Text(
                 color = Color.White,
                 text = formatSecond(duration)
@@ -143,16 +141,16 @@ fun PlayerSlider(
 }
 
 /**
- * 格式化時間
+ * Formats seconds as a display string.
  *
- * @param seconds 秒數
- * @return 格式化後的時間字符串（mm:ss）
+ * @param seconds Total seconds.
+ * @return Formatted text in `mm:ss` or `h:mm:ss`.
  *
- * 範例：
- * - 0    → "00:00"
- * - 30   → "00:30"
- * - 90   → "01:30"
- * - 3665 → "61:05"
+ * Examples:
+ * - 0 -> "00:00"
+ * - 30 -> "00:30"
+ * - 90 -> "01:30"
+ * - 3665 -> "1:01:05"
  */
 private fun formatSecond(seconds: Float): String {
     val s = seconds.toInt().coerceAtLeast(0)

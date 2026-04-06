@@ -1,13 +1,13 @@
 package com.alex.yang.youtubecompose.presentation
 
 import android.content.res.Configuration
+import android.view.MotionEvent
 import android.view.View
 import android.widget.FrameLayout
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,7 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -53,10 +53,16 @@ import com.alex.yang.youtubecompose.ui.theme.AlexYoutubeComposeTheme
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView
 import kotlinx.coroutines.delay
 
+private fun Modifier.consumePlayerTouches(onTap: (() -> Unit)? = null): Modifier =
+    pointerInteropFilter { event ->
+        if (event.actionMasked == MotionEvent.ACTION_UP) {
+            onTap?.invoke()
+        }
+        true
+    }
+
 /**
- * Created by AlexYang on 2026/1/26.
- *
- *
+ * Main video playback screen.
  */
 @Composable
 fun VideoScreen(
@@ -68,7 +74,7 @@ fun VideoScreen(
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current
 
-    // ========== 新增唯一的控制器和播放器 ==========
+    // Keep a single controller and player instance for this screen.
     val controller = remember { PlayerController() }
     val playView = remember {
         createYouTubePlayerView(
@@ -80,16 +86,16 @@ fun VideoScreen(
         )
     }
 
-    // ========== 訂閱狀態 ==========
+    // Observe playback state from the controller.
     val playbackState by controller.playbackState.collectAsStateWithLifecycle()
 
-    // ========== 生命週期管理 ==========
+    // Register the controller with the lifecycle.
     DisposableEffect(lifecycle) {
         lifecycle.lifecycle.addObserver(controller)
         onDispose { lifecycle.lifecycle.removeObserver(controller) }
     }
 
-    // ========== 檢測螢幕方向 ==========
+    // Track the physical device orientation.
     val deviceOrientation = rememberDeviceOrientation()
     val isLandscape = deviceOrientation.isLandscape
     var blockLandscapeOnce by rememberSaveable { mutableStateOf(false) }
@@ -98,7 +104,7 @@ fun VideoScreen(
         if (!isLandscape && blockLandscapeOnce) blockLandscapeOnce = false
     }
 
-    // ========== 根據方向顯示不同佈局 ==========
+    // Switch between portrait and landscape layouts.
     if (isLandscape && !blockLandscapeOnce) {
         LandscapeLayout(
             video = video,
@@ -123,7 +129,7 @@ fun VideoScreen(
 }
 
 /**
- * 直屏佈局
+ * Portrait screen layout.
  */
 @Composable
 private fun PortraitLayout(
@@ -138,19 +144,25 @@ private fun PortraitLayout(
             .background(Color.Black),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // 播放器區域
+        // Player area.
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(16f / 9f)
         ) {
-            // Youtube Player
+            // Embedded YouTube player view.
             AndroidView(
                 modifier = Modifier.fillMaxSize(),
                 factory = { playerView }
             )
 
-            // Loading
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .consumePlayerTouches()
+            )
+
+            // Loading indicator.
             if (playbackState == PlaybackState.BUFFERING) {
                 CircularProgressIndicator(
                     modifier = Modifier.align(Alignment.Center),
@@ -159,7 +171,7 @@ private fun PortraitLayout(
             }
         }
 
-        // 標題
+        // Video title.
         Text(
             modifier = Modifier
                 .fillMaxWidth()
@@ -171,7 +183,7 @@ private fun PortraitLayout(
             text = video.title
         )
 
-        // 描述
+        // Video description.
         Text(
             modifier = Modifier
                 .fillMaxWidth()
@@ -183,7 +195,7 @@ private fun PortraitLayout(
             text = video.description
         )
 
-        // 播放進度條
+        // Playback progress.
         PlayerSlider(controller = controller)
 
         PlayerButtons(controller = controller)
@@ -191,12 +203,12 @@ private fun PortraitLayout(
 }
 
 /**
- * 橫屏佈局（全螢幕）
+ * Landscape fullscreen layout.
  *
- * 特點：
- * - 點擊顯示/隱藏控制面板
- * - 3 秒後自動隱藏
- * - 淡入淡出動畫
+ * Behavior:
+ * - Tap to show or hide the controls.
+ * - Auto-hide the controls after a short delay.
+ * - Use fade animations for the overlay.
  */
 @Composable
 private fun LandscapeLayout(
@@ -206,10 +218,10 @@ private fun LandscapeLayout(
     playbackState: PlaybackState,
     onExitFullscreen: () -> Unit = {}
 ) {
-    // ========== 控制面板顯示狀態 ==========
+    // Whether the overlay controls are currently visible.
     var showControls by remember { mutableStateOf(true) }
 
-    // ========== 自動隱藏（3 秒後）==========
+    // Auto-hide the controls after a short delay.
     LaunchedEffect(showControls) {
         if (showControls) {
             delay(2500L)
@@ -222,23 +234,23 @@ private fun LandscapeLayout(
             .fillMaxSize()
             .background(Color.Black)
     ) {
-        // Youtube Player
+        // Embedded YouTube player view.
         AndroidView(
             modifier = Modifier.fillMaxSize(),
             factory = { playerView },
             update = { view ->
-                // 強制 Fullscreen LayoutParams
+                // Force fullscreen layout params.
                 view.layoutParams = FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT,
                     FrameLayout.LayoutParams.MATCH_PARENT
                 )
 
-                // 通知 parent 重新 layout（避免一半機率不生效）
+                // Request another layout pass from the parent to avoid stale sizing.
                 (view.parent as? View)?.requestLayout()
             }
         )
 
-        // ========== Loading 指示器 ==========
+        // Loading indicator.
         if (playbackState == PlaybackState.BUFFERING) {
             CircularProgressIndicator(
                 modifier = Modifier.align(Alignment.Center),
@@ -246,16 +258,14 @@ private fun LandscapeLayout(
             )
         }
 
-        // ========== 點擊檢測層（中層）==========
+        // Touch layer used to toggle the controls.
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .pointerInput(Unit) {
-                    detectTapGestures(onTap = { showControls = !showControls })
-                }
+                .consumePlayerTouches { showControls = !showControls }
         )
 
-        // ========== 控制面板（頂層）==========
+        // Top-most control panel.
         AnimatedVisibility(
             modifier = Modifier.fillMaxSize(),
             visible = showControls,

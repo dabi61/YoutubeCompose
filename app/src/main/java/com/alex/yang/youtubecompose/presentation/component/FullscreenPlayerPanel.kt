@@ -41,9 +41,7 @@ import com.alex.yang.youtubecompose.player.PlayerController
 import com.alex.yang.youtubecompose.ui.theme.AlexYoutubeComposeTheme
 
 /**
- * Created by AlexYang on 2026/1/26.
- *
- *
+ * Fullscreen overlay controls shown above the video player.
  */
 @Composable
 fun FullscreenPlayerPanel(
@@ -55,14 +53,14 @@ fun FullscreenPlayerPanel(
 
     Box(modifier = Modifier.fillMaxSize()) {
 
-        // === 背景層 - 只處理空白區域點擊 ===
+        // Background layer used only for dimming the player.
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = 0.3f))
         )
 
-        // === 頂部控制區域 ===
+        // Top control area.
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -71,7 +69,7 @@ fun FullscreenPlayerPanel(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 影片標題
+            // Video title.
             Text(
                 modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.titleLarge,
@@ -82,7 +80,7 @@ fun FullscreenPlayerPanel(
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            // 退出全螢幕按鈕
+            // Exit fullscreen button.
             IconButton(
                 modifier = Modifier.background(Color.Black.copy(alpha = 0.2f), CircleShape),
                 onClick = onExitFullscreen,
@@ -95,7 +93,7 @@ fun FullscreenPlayerPanel(
             }
         }
 
-        // === 中央播放控制區域 ===
+        // Center playback controls.
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -104,7 +102,7 @@ fun FullscreenPlayerPanel(
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 快退 10 秒
+            // Rewind 10 seconds.
             IconButton(
                 modifier = Modifier.size(84.dp),
                 onClick = { controller.seekBackward() }
@@ -117,7 +115,7 @@ fun FullscreenPlayerPanel(
                 )
             }
 
-            // 播放/暫停/重播按鈕
+            // Play/pause/replay button.
             IconButton(
                 modifier = Modifier
                     .size(84.dp)
@@ -142,7 +140,7 @@ fun FullscreenPlayerPanel(
                 )
             }
 
-            // 快進 10 秒
+            // Forward 10 seconds.
             IconButton(
                 modifier = Modifier.size(84.dp),
                 onClick = { controller.seekForward() },
@@ -156,7 +154,7 @@ fun FullscreenPlayerPanel(
             }
         }
 
-        // === 底部進度控制區域 ===
+        // Bottom progress and actions area.
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -171,46 +169,46 @@ fun FullscreenPlayerPanel(
                 )
                 .padding(horizontal = 8.dp),
         ) {
-            // 播放進度條
+            // Playback progress bar.
             PlayerSlider(controller = controller)
 
-            // 底部控制按鈕
+            // Bottom action buttons.
             Box(modifier = Modifier.fillMaxWidth()) {
-                Row(
-                    modifier = Modifier.align(Alignment.Center),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // 收藏 按鈕
-                    IconButton(
-                        onClick = {
-                            //TODO: 收藏 按鈕
-                        }
-                    ) {
-                        Icon(
-                            modifier = Modifier.size(36.dp),
-                            painter = painterResource(R.drawable.ic_player_collect),
-                            contentDescription = null,
-                            tint = Color.White,
-                        )
-                    }
+//                Row(
+//                    modifier = Modifier.align(Alignment.Center),
+//                    horizontalArrangement = Arrangement.Center,
+//                    verticalAlignment = Alignment.CenterVertically
+//                ) {
+//                    // Favorite button.
+//                    IconButton(
+//                        onClick = {
+//                            // TODO: Favorite action.
+//                        }
+//                    ) {
+//                        Icon(
+//                            modifier = Modifier.size(36.dp),
+//                            painter = painterResource(R.drawable.ic_player_collect),
+//                            contentDescription = null,
+//                            tint = Color.White,
+//                        )
+//                    }
+//
+//                    // Share button.
+//                    IconButton(
+//                        onClick = {
+//                            // TODO: Share action.
+//                        }
+//                    ) {
+//                        Icon(
+//                            modifier = Modifier.size(36.dp),
+//                            painter = painterResource(R.drawable.ic_player_share),
+//                            contentDescription = null,
+//                            tint = Color.White,
+//                        )
+//                    }
+//                }
 
-                    // 分享 按鈕
-                    IconButton(
-                        onClick = {
-                            //TODO: 分享 按鈕
-                        }
-                    ) {
-                        Icon(
-                            modifier = Modifier.size(36.dp),
-                            painter = painterResource(R.drawable.ic_player_share),
-                            contentDescription = null,
-                            tint = Color.White,
-                        )
-                    }
-                }
-
-                // 全螢幕切換按鈕
+                // Fullscreen toggle button.
                 IconButton(
                     modifier = Modifier.align(Alignment.CenterEnd),
                     onClick = onExitFullscreen,

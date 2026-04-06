@@ -3,6 +3,7 @@
 ## Docs
 
 - Architecture and flow: [docs/youtube-player-architecture.vi.md](docs/youtube-player-architecture.vi.md)
+- Smooth startup preload gate: see section `6.3 Co che preload de xem muot hon` in the architecture doc.
 
 ## Giới thiệu dự án
 

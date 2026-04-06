@@ -28,9 +28,7 @@ import com.alex.yang.youtubecompose.player.PlayerController
 import com.alex.yang.youtubecompose.ui.theme.AlexYoutubeComposeTheme
 
 /**
- * Created by AlexYang on 2026/1/26.
- *
- *
+ * Playback controls shown below the player in portrait mode.
  */
 @Composable
 fun PlayerButtons(
@@ -43,7 +41,7 @@ fun PlayerButtons(
         horizontalArrangement = Arrangement.SpaceAround,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 快退 10 秒
+        // Rewind 10 seconds.
         IconButton(
             modifier = Modifier.size(64.dp),
             onClick = { controller.seekBackward() }
@@ -55,7 +53,7 @@ fun PlayerButtons(
             )
         }
 
-        // 播放/暫停按鈕（大）
+        // Large play/pause/replay button.
         IconButton(
             modifier = Modifier
                 .size(72.dp)
@@ -80,7 +78,7 @@ fun PlayerButtons(
             )
         }
 
-        // 快進 10 秒
+        // Forward 10 seconds.
         IconButton(
             modifier = Modifier.size(64.dp),
             onClick = { controller.seekForward() }
@@ -93,7 +91,6 @@ fun PlayerButtons(
         }
     }
 }
-
 
 @Preview(
     showBackground = true,

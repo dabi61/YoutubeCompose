@@ -10,11 +10,6 @@ import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.Abs
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.options.IFramePlayerOptions
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView
 
-/**
- * Created by AlexYang on 2026/1/26.
- *
- *
- */
 fun createYouTubePlayerView(
     context: Context,
     lifecycleOwner: LifecycleOwner,
@@ -22,21 +17,17 @@ fun createYouTubePlayerView(
     videoId: String,
     initSecond: Float = 0f
 ): YouTubePlayerView {
-    Log.d(TAG, "🏗️ create YouTubePlayerView")
+    Log.d(TAG, "create YouTubePlayerView")
     Log.d(TAG, "videoId: $videoId, initSecond: ${initSecond}s")
 
     return YouTubePlayerView(context).apply {
         lifecycleOwner.lifecycle.addObserver(this)
-
-        // 禁用自動初始化，手動控制
         enableAutomaticInitialization = false
 
-        // 初始化 YouTubePlayer
         initialize(
             object : AbstractYouTubePlayerListener() {
                 override fun onReady(youTubePlayer: YouTubePlayer) {
-                    Log.d(TAG, "✅ YouTubePlayer onReady!")
-
+                    Log.d(TAG, "YouTubePlayer onReady")
                     controller.initialize(youTubePlayer)
                     controller.loadVideo(videoId, initSecond)
                 }
@@ -47,6 +38,20 @@ fun createYouTubePlayerView(
 
                 override fun onVideoDuration(youTubePlayer: YouTubePlayer, duration: Float) {
                     controller.updateDuration(duration)
+                }
+
+                override fun onVideoLoadedFraction(
+                    youTubePlayer: YouTubePlayer,
+                    loadedFraction: Float
+                ) {
+                    controller.updateLoadedFraction(loadedFraction)
+                }
+
+                override fun onPlaybackQualityChange(
+                    youTubePlayer: YouTubePlayer,
+                    playbackQuality: PlayerConstants.PlaybackQuality
+                ) {
+                    controller.updatePlaybackQuality(playbackQuality)
                 }
 
                 override fun onStateChange(
@@ -60,12 +65,14 @@ fun createYouTubePlayerView(
                     youTubePlayer: YouTubePlayer,
                     error: PlayerConstants.PlayerError
                 ) {
-                    Log.e(TAG, "❌ 播放器錯誤: $error")
+                    Log.e(TAG, "Player error: $error")
                 }
             },
             false,
             IFramePlayerOptions.Builder(context)
                 .controls(0)
+                .fullscreen(0)
+                .ivLoadPolicy(3)
                 .rel(0)
                 .ccLoadPolicy(0)
                 .build()

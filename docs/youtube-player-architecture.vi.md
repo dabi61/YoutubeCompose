@@ -16,6 +16,7 @@ Repo nay khong dong goi player thanh Android library module rieng, nhung ve mat 
 
 Code tham chieu:
 - [`PlayerController.kt`](../app/src/main/java/com/alex/yang/youtubecompose/player/PlayerController.kt)
+- [`PlaybackPreloadConfig.kt`](../app/src/main/java/com/alex/yang/youtubecompose/player/PlaybackPreloadConfig.kt)
 - [`PlayerFactory.kt`](../app/src/main/java/com/alex/yang/youtubecompose/player/PlayerFactory.kt)
 - [`VideoScreen.kt`](../app/src/main/java/com/alex/yang/youtubecompose/presentation/VideoScreen.kt)
 - [`DeviceUtils.kt`](../app/src/main/java/com/alex/yang/youtubecompose/core/orientation/DeviceUtils.kt)
@@ -120,13 +121,17 @@ sequenceDiagram
     I-->>L: onReady(youTubePlayer)
     L->>C: initialize(youTubePlayer)
     L->>C: loadVideo(videoId, initSecond)
-    C->>I: loadVideo(...)
+    C->>I: cueVideo(...)
+    I-->>L: onVideoLoadedFraction(...)
+    L->>C: updateLoadedFraction(...)
+    I-->>L: onVideoDuration(...)
+    L->>C: updateDuration(...)
+    C->>C: tryStartPlayback()
+    C->>I: play() khi du preload\nhoac timeout an toan
     I-->>L: onStateChange(BUFFERING / PLAYING)
     L->>C: updatePlaybackState(...)
     I-->>L: onCurrentSecond(...)
     L->>C: updateCurrentSecond(...)
-    I-->>L: onVideoDuration(...)
-    L->>C: updateDuration(...)
     C-->>UI: StateFlow phat ra gia tri moi
     UI-->>U: Recompose va cap nhat UI
 ```
@@ -134,6 +139,7 @@ sequenceDiagram
 Y nghia:
 - `VideoScreen` chi tao mot `PlayerController` va mot `YouTubePlayerView` bang `remember`.
 - `PlayerController` giu reference `YouTubePlayer` sau khi `onReady`.
+- `PlayerController` khong goi `loadVideo()` truc tiep nua, ma `cueVideo()` truoc de co mot lop preload gate cho lan autoplay dau.
 - Tu thoi diem do, UI khong noi chuyen truc tiep voi player nua. Moi lenh di qua `PlayerController`.
 
 ## 5. Luong tuong tac khi nguoi dung dieu khien
@@ -167,7 +173,7 @@ Ban chat cua co che nay:
 | Ham | Khi nao duoc goi | Muc dich |
 | --- | --- | --- |
 | `initialize(youTubePlayer)` | `onReady()` | Giu instance player va chuyen sang `READY` |
-| `loadVideo(videoId, startTime)` | Sau `initialize` | Tai video va dua state sang `BUFFERING` |
+| `loadVideo(videoId, startTime)` | Sau `initialize` | `cue` video, mo preload gate va chi autoplay khi du dieu kien |
 | `play()` | Tu nut Play hoac replay xong | Tiep tuc phat |
 | `pause()` | Tu nut Pause | Tam dung |
 | `replay()` | Khi state la `ENDED` | Seek ve 0 va phat lai |
@@ -181,15 +187,42 @@ Ban chat cua co che nay:
 | --- | --- | --- |
 | `updateCurrentSecond(second)` | `onCurrentSecond()` | Dong bo thoi gian hien tai |
 | `updateDuration(duration)` | `onVideoDuration()` | Dong bo tong thoi luong |
+| `updateLoadedFraction(loadedFraction)` | `onVideoLoadedFraction()` | Dong bo phan tram du lieu da nap |
 | `updatePlaybackState(state)` | `onStateChange()` | Chuyen state web player sang state noi bo cua app |
 
-### 6.3 State machine noi bo
+### 6.3 Co che preload de xem muot hon
+
+YouTube IFrame API khong cho set truc tiep kieu "buffer truoc 10 giay", vi vay repo nay dung mot chien luoc mem trong `PlayerController`:
+
+1. Khi player `onReady`, app khong autoplay ngay ma goi `cueVideo(videoId, startTime)`.
+2. `PlayerController` theo doi `onVideoLoadedFraction()` va `onVideoDuration()`.
+3. Neu uoc tinh da nap du `minBufferedSeconds`, app moi goi `play()`.
+4. Neu YouTube khong gui du metadata/callback som, app se fallback sau `maxPreloadWaitMs` de tranh treo o loading qua lau.
+
+Gia tri mac dinh hien tai nam trong [`PlaybackPreloadConfig.kt`](../app/src/main/java/com/alex/yang/youtubecompose/player/PlaybackPreloadConfig.kt):
+
+```kotlin
+PlaybackPreloadConfig(
+    minBufferedSeconds = 8f,
+    minBufferedFraction = 0.03f,
+    maxPreloadWaitMs = 2_500L,
+)
+```
+
+Y nghia:
+- `minBufferedSeconds`: so giay muon co truoc khi autoplay.
+- `minBufferedFraction`: fallback khi duration chua co.
+- `maxPreloadWaitMs`: gioi han cho de khong doi qua lau neu callback cua YouTube den cham.
+
+Day la heuristic de giam hien tuong vua vao video da bi khung hinh dau roi dung lai de buffering. No khong bien IFrame player thanh ExoPlayer, nhung thuong giup trai nghiem on dinh hon.
+
+### 6.4 State machine noi bo
 
 ```mermaid
 stateDiagram-v2
     [*] --> IDLE
     IDLE --> READY: initialize()
-    READY --> BUFFERING: loadVideo()
+    READY --> BUFFERING: loadVideo() + preload gate
     BUFFERING --> PLAYING: onStateChange(PLAYING)
     PLAYING --> PAUSED: onStateChange(PAUSED)
     PAUSED --> PLAYING: onStateChange(PLAYING)
@@ -291,6 +324,7 @@ Y nghia:
 - Khong phai native stream player nen khong co muc do kiem soat nhu ExoPlayer
 - Hanh vi phu thuoc vao IFrame player cua YouTube
 - Kha nang custom bi gioi han boi nhung gi IFrame API cho phep
+- Co che preload moi chi la heuristic dua tren `loadedFraction`, khong phai real buffer-length API
 - Cac thao tac doc state co tinh bat dong bo tu nhien
 - Phai tuan thu ToS cua YouTube
 
@@ -298,6 +332,7 @@ Y nghia:
 
 - `PlayerController` la lop on dinh hoa state cho Compose
 - `StateFlow` la lop cach ly giua web player va UI
+- Chien luoc "xem muot hon" nam o `PlaybackPreloadConfig` va preload gate trong `PlayerController`
 - Fullscreen phai do app tu quan ly
 - Neu sau nay tach thanh reusable library module, `PlayerController` va `createYouTubePlayerView` nen la hat nhan dau tien duoc tach ra
 
@@ -309,8 +344,9 @@ Neu muon dung lai co che hien tai o screen khac, mau tich hop toi thieu la:
 2. Tao `YouTubePlayerView` bang `remember { createYouTubePlayerView(...) }`.
 3. Dung `AndroidView` de host player.
 4. Dung `collectAsStateWithLifecycle()` de nghe `playbackState`, `currentSecond`, `duration`.
-5. Tat controls cua IFrame va de UI native cua app len tren.
-6. Neu can fullscreen, de app tu quan ly orientation va system bars.
+5. Neu muon doi muc preload, chinh `PlaybackPreloadConfig`.
+6. Tat controls cua IFrame va de UI native cua app len tren.
+7. Neu can fullscreen, de app tu quan ly orientation va system bars.
 
 ## 13. De xuat neu muon nang cap thanh library noi bo
 

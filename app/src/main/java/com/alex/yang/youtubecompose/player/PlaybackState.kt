@@ -1,52 +1,36 @@
 package com.alex.yang.youtubecompose.player
 
 /**
- * Created by AlexYang on 2026/1/26.
- *
- * 播放狀態枚舉
- *
- * 定義播放器可能處於的所有狀態
+ * Playback states exposed to the UI layer.
  */
 enum class PlaybackState {
     /**
-     * 閒置狀態
-     * - 播放器尚未初始化
-     * - 或已經被釋放
+     * The player has not been initialized yet or has already been released.
      */
     IDLE,
 
     /**
-     * 準備就緒
-     * - 播放器已初始化
-     * - 可以開始播放
+     * The player is initialized and ready to accept playback commands.
      */
     READY,
 
     /**
-     * 緩衝中
-     * - 正在載入影片數據
-     * - 播放器可能正在播放，但在等待數據
+     * The player is currently waiting for more media data.
      */
     BUFFERING,
 
     /**
-     * 播放中
-     * - 影片正在播放
-     * - 這是主要的播放狀態
+     * The video is actively playing.
      */
     PLAYING,
 
     /**
-     * 暫停
-     * - 用戶主動暫停
-     * - 或播放器因其他原因暫停
+     * Playback is paused by the user or by the player.
      */
     PAUSED,
 
     /**
-     * 結束
-     * - 影片播放完畢
-     * - 播放進度到達結尾
+     * Playback reached the end of the video.
      */
     ENDED
 }

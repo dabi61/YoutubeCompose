@@ -4,12 +4,9 @@ import android.app.Application
 import dagger.hilt.android.HiltAndroidApp
 
 /**
- * Created by AlexYang on 2026/1/26.
- *
- *
+ * Application entry point used to initialize Hilt.
  */
 @HiltAndroidApp
-class App: Application()
-
+class App : Application()
 
 const val TAG = "[DEBUG]"

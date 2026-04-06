@@ -5,9 +5,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 
 /**
- * Created by AlexYang on 2026/1/26.
- *
- *
+ * ViewModel for the video screen.
  */
 @HiltViewModel
 class VideoViewModel @Inject constructor(
