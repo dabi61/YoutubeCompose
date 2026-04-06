@@ -1,6 +1,3 @@
-Đây là bản dịch full theo đúng format markdown để bạn copy-paste lại vào file README. Nội dung được dịch từ file bạn gửi. 
-
-````markdown
 # Android YouTube Player Compose
 
 ## Giới thiệu dự án
