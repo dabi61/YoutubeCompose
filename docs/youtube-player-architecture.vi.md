@@ -1,59 +1,64 @@
-# Tai lieu kien truc module YouTube Player
+# YouTube Player Module Architecture
 
-Tai lieu nay mo ta kien truc, so do hoat dong, co che van hanh va ban chat cua phan player trong repo `YoutubeCompose`.
+This document explains the architecture, data flow, operating model, and technical nature of the player layer inside the `YoutubeCompose` repository.
 
-Pham vi:
-- Gradle module hien tai chi co `:app`.
-- "Module player" duoc hieu la cum package `player`, `presentation`, `core/orientation` va cach chung duoc ghep lai trong `VideoScreen`.
+Scope:
+- The project currently uses only the `:app` Gradle module.
+- The "player module" in this document refers to the `player`, `presentation`, and `core/orientation` packages working together through `VideoScreen`.
 
-## 1. Tong quan nhanh
+## 1. Quick Overview
 
-Repo nay khong dong goi player thanh Android library module rieng, nhung ve mat kien truc no da tach ro cac vai tro:
-- `player/`: cau noi giua app va `android-youtube-player`
-- `presentation/`: Compose UI va tuong tac nguoi dung
-- `core/orientation/`: fullscreen, system bars, xoay man hinh
-- `domain/model/`: du lieu `Video`
+The repo does not package the player as a separate Android library module, but the responsibilities are already clearly separated:
 
-Code tham chieu:
+- `player/`: bridge between the app and `android-youtube-player`
+- `presentation/`: Compose UI and user interaction
+- `core/orientation/`: fullscreen, system bars, and screen orientation logic
+- `domain/model/`: `Video` data model
+
+Code references:
 - [`PlayerController.kt`](../app/src/main/java/com/alex/yang/youtubecompose/player/PlayerController.kt)
 - [`PlaybackPreloadConfig.kt`](../app/src/main/java/com/alex/yang/youtubecompose/player/PlaybackPreloadConfig.kt)
 - [`PlayerFactory.kt`](../app/src/main/java/com/alex/yang/youtubecompose/player/PlayerFactory.kt)
 - [`VideoScreen.kt`](../app/src/main/java/com/alex/yang/youtubecompose/presentation/VideoScreen.kt)
 - [`DeviceUtils.kt`](../app/src/main/java/com/alex/yang/youtubecompose/core/orientation/DeviceUtils.kt)
 
-## 2. Ban chat cua library `android-youtube-player`
+## 2. Nature of `android-youtube-player`
 
-Library dang duoc dung trong repo la:
+The library used in this repo is:
 
 ```kotlin
 implementation("com.pierfrancescosoffritti.androidyoutubeplayer:core:13.0.0")
 ```
 
-Ban chat cua no:
-- Day khong phai native media player nhu `ExoPlayer`.
-- Day cung khong phai YouTube Android Player API cu cua Google.
-- Day la mot lop boc quanh YouTube IFrame Player API, chay ben trong `WebView`, va cung cap interface Kotlin/Java de dieu khien player theo kieu native.
+What it actually is:
 
-He qua truc tiep cua ban chat nay:
-- App khong phat stream YouTube bang pipeline media native cua Android.
-- App dang dieu khien mot web player cua YouTube thong qua bridge native <-> WebView <-> IFrame.
-- Cac thao tac doc state co the bat dong bo vi state that su nam trong IFrame player.
-- Viec tuy bien UI rat linh hoat: co the tat control goc cua IFrame va de native UI cua app de len tren.
-- Van phai ton trong YouTube Terms of Service: khong tai video, khong loai bo quang cao, khong lam background playback neu muon len Play Store.
+- It is **not** a native media player like `ExoPlayer`.
+- It is **not** the legacy Google YouTube Android Player API.
+- It is a wrapper around the **YouTube IFrame Player API**, running inside a `WebView`, while exposing a Kotlin/Java interface that feels native.
 
-Tai sao repo nay chon cach nay:
-- `android-youtube-player` cho Android mot diem vao don gian la `YouTubePlayerView`.
-- `YouTubePlayerView` co tinh lifecycle-aware.
-- De ket hop voi Compose, repo chi can boc no bang `AndroidView`.
+Direct consequences:
 
-Nguon chinh thuc:
+- The app does not play YouTube streams through Android's native media pipeline.
+- The app is controlling a YouTube web player through a native <-> WebView <-> IFrame bridge.
+- State reads are naturally asynchronous because the real playback state lives inside the IFrame player.
+- UI customization is flexible because the default IFrame controls can be disabled and replaced with native UI.
+- The app must still respect YouTube Terms of Service: no downloading, no ad removal, and no forbidden background playback behavior.
+
+Why this repo uses it:
+
+- `android-youtube-player` provides a simple Android entry point with `YouTubePlayerView`.
+- `YouTubePlayerView` is lifecycle-aware.
+- Compose can host it with `AndroidView`.
+
+Primary references:
+
 - Official repo: https://github.com/PierfrancescoSoffritti/android-youtube-player
 - API docs / README: https://github.com/PierfrancescoSoffritti/android-youtube-player
 - Release `13.0.0`: https://github.com/PierfrancescoSoffritti/android-youtube-player/releases/tag/13.0.0
 
-## 3. Kien truc trong repo
+## 3. Repository Architecture
 
-### 3.1 So do lop kien truc
+### 3.1 Layer Diagram
 
 ```mermaid
 flowchart TD
@@ -86,20 +91,20 @@ flowchart TD
     Q --> R[Activity orientation + system bars]
 ```
 
-### 3.2 Phan tach trach nhiem
+### 3.2 Responsibility Split
 
-| Thanh phan | Vai tro |
+| Component | Responsibility |
 | --- | --- |
-| `MainActivity` | Khoi dong UI va render `VideoScreen` |
-| `VideoScreen` | To chuc man hinh, tao controller, tao player view, chon portrait/landscape |
-| `PlayerController` | Trung tam state va lenh dieu khien player |
-| `createYouTubePlayerView` | Khoi tao `YouTubePlayerView`, bind lifecycle, dang ky callback |
-| `PlayerButtons` | Play, pause, replay, tua nhanh, tua lui |
-| `PlayerSlider` | Hien thi tien do, seek theo vi tri nguoi dung chon |
-| `FullscreenPlayerPanel` | Overlay dieu khien khi fullscreen |
-| `DeviceUtils` | Theo doi huong thiet bi, ep orientation, an/hien system bars |
+| `MainActivity` | Starts the UI and renders `VideoScreen` |
+| `VideoScreen` | Organizes screen layout, creates the controller and player view, switches between portrait and landscape |
+| `PlayerController` | Central state holder and command layer for the player |
+| `createYouTubePlayerView` | Creates `YouTubePlayerView`, binds lifecycle, registers callbacks |
+| `PlayerButtons` | Play, pause, replay, fast-forward, rewind |
+| `PlayerSlider` | Displays progress and lets the user seek |
+| `FullscreenPlayerPanel` | Fullscreen overlay controls |
+| `DeviceUtils` | Tracks device orientation, forces orientation, hides and shows system bars |
 
-## 4. Luong khoi tao player
+## 4. Player Initialization Flow
 
 ```mermaid
 sequenceDiagram
@@ -112,7 +117,7 @@ sequenceDiagram
     participant I as IFrame Player
     participant UI as Compose UI
 
-    U->>A: Mo app
+    U->>A: Open app
     A->>S: Render VideoScreen()
     S->>C: remember { PlayerController() }
     S->>V: remember { createYouTubePlayerView(...) }
@@ -127,22 +132,23 @@ sequenceDiagram
     I-->>L: onVideoDuration(...)
     L->>C: updateDuration(...)
     C->>C: tryStartPlayback()
-    C->>I: play() khi du preload\nhoac timeout an toan
+    C->>I: play() when preload is sufficient or timeout is reached
     I-->>L: onStateChange(BUFFERING / PLAYING)
     L->>C: updatePlaybackState(...)
     I-->>L: onCurrentSecond(...)
     L->>C: updateCurrentSecond(...)
-    C-->>UI: StateFlow phat ra gia tri moi
-    UI-->>U: Recompose va cap nhat UI
+    C-->>UI: StateFlow emits updated values
+    UI-->>U: Recompose and refresh UI
 ```
 
-Y nghia:
-- `VideoScreen` chi tao mot `PlayerController` va mot `YouTubePlayerView` bang `remember`.
-- `PlayerController` giu reference `YouTubePlayer` sau khi `onReady`.
-- `PlayerController` khong goi `loadVideo()` truc tiep nua, ma `cueVideo()` truoc de co mot lop preload gate cho lan autoplay dau.
-- Tu thoi diem do, UI khong noi chuyen truc tiep voi player nua. Moi lenh di qua `PlayerController`.
+Meaning:
 
-## 5. Luong tuong tac khi nguoi dung dieu khien
+- `VideoScreen` creates exactly one `PlayerController` and one `YouTubePlayerView` with `remember`.
+- `PlayerController` stores the `YouTubePlayer` reference after `onReady`.
+- `PlayerController` no longer calls `loadVideo()` directly on the IFrame player. It calls `cueVideo()` first to apply a startup preload gate.
+- From that point on, the UI does not talk to the player directly. All commands go through `PlayerController`.
+
+## 5. User Interaction Flow
 
 ```mermaid
 sequenceDiagram
@@ -152,54 +158,55 @@ sequenceDiagram
     participant P as YouTubePlayer
     participant CB as Library callbacks
 
-    U->>UI: Bam Play / Pause / Seek
-    UI->>C: goi play(), pause(), seekTo(), seekForward()...
-    C->>P: goi lenh toi YouTubePlayer
-    P-->>CB: phat sinh callback state / time
+    U->>UI: Tap Play / Pause / Seek
+    UI->>C: call play(), pause(), seekTo(), seekForward()...
+    C->>P: send command to YouTubePlayer
+    P-->>CB: emit state / time callbacks
     CB->>C: updatePlaybackState(), updateCurrentSecond(), updateDuration()
-    C-->>UI: StateFlow moi
-    UI-->>U: Icon, slider, loading duoc cap nhat
+    C-->>UI: publish new StateFlow values
+    UI-->>U: update icons, slider, loading indicator
 ```
 
-Ban chat cua co che nay:
-- UI gui lenh theo huong xuong.
-- Player callback ket qua theo huong nguoc len.
-- `StateFlow` la lop dong bo trung gian de Compose khong phai "doc" truc tiep tu player.
+The nature of this mechanism:
 
-## 6. Cac phuong thuc van hanh chinh
+- UI sends commands downward.
+- Player callbacks return state upward.
+- `StateFlow` acts as the synchronization layer so Compose never has to read directly from the player.
 
-### 6.1 Nhom lenh dieu khien
+## 6. Main Operating APIs
 
-| Ham | Khi nao duoc goi | Muc dich |
+### 6.1 Command Functions
+
+| Function | When it is used | Purpose |
 | --- | --- | --- |
-| `initialize(youTubePlayer)` | `onReady()` | Giu instance player va chuyen sang `READY` |
-| `loadVideo(videoId, startTime)` | Sau `initialize` | `cue` video, mo preload gate va chi autoplay khi du dieu kien |
-| `play()` | Tu nut Play hoac replay xong | Tiep tuc phat |
-| `pause()` | Tu nut Pause | Tam dung |
-| `replay()` | Khi state la `ENDED` | Seek ve 0 va phat lai |
-| `seekTo(time)` | Khi keo slider | Nhay den vi tri mong muon |
-| `seekBackward(seconds)` | Tu nut tua lui | Lui lai, mac dinh 10 giay |
-| `seekForward(seconds)` | Tu nut tua toi | Tien len, mac dinh 10 giay |
+| `initialize(youTubePlayer)` | `onReady()` | Store the player instance and move to `READY` |
+| `loadVideo(videoId, startTime)` | After `initialize` | `cue` the video, start the preload gate, and autoplay only when conditions are met |
+| `play()` | Play button or resume flow | Continue playback |
+| `pause()` | Pause button | Pause playback |
+| `replay()` | When the state is `ENDED` | Seek to `0` and play again |
+| `seekTo(time)` | Slider seek | Jump to a target position |
+| `seekBackward(seconds)` | Rewind button | Move backward, default 10 seconds |
+| `seekForward(seconds)` | Forward button | Move forward, default 10 seconds |
 
-### 6.2 Nhom cap nhat state
+### 6.2 State Update Functions
 
-| Ham | Nguon goi | Y nghia |
+| Function | Trigger source | Meaning |
 | --- | --- | --- |
-| `updateCurrentSecond(second)` | `onCurrentSecond()` | Dong bo thoi gian hien tai |
-| `updateDuration(duration)` | `onVideoDuration()` | Dong bo tong thoi luong |
-| `updateLoadedFraction(loadedFraction)` | `onVideoLoadedFraction()` | Dong bo phan tram du lieu da nap |
-| `updatePlaybackState(state)` | `onStateChange()` | Chuyen state web player sang state noi bo cua app |
+| `updateCurrentSecond(second)` | `onCurrentSecond()` | Synchronize current playback time |
+| `updateDuration(duration)` | `onVideoDuration()` | Synchronize total duration |
+| `updateLoadedFraction(loadedFraction)` | `onVideoLoadedFraction()` | Synchronize buffered percentage |
+| `updatePlaybackState(state)` | `onStateChange()` | Map web player state to app playback state |
 
-### 6.3 Co che preload de xem muot hon
+### 6.3 Smoother Startup Preload
 
-YouTube IFrame API khong cho set truc tiep kieu "buffer truoc 10 giay", vi vay repo nay dung mot chien luoc mem trong `PlayerController`:
+The YouTube IFrame API does not expose a direct "buffer 10 seconds ahead" configuration. Because of that, this repo uses a soft strategy inside `PlayerController`:
 
-1. Khi player `onReady`, app khong autoplay ngay ma goi `cueVideo(videoId, startTime)`.
-2. `PlayerController` theo doi `onVideoLoadedFraction()` va `onVideoDuration()`.
-3. Neu uoc tinh da nap du `minBufferedSeconds`, app moi goi `play()`.
-4. Neu YouTube khong gui du metadata/callback som, app se fallback sau `maxPreloadWaitMs` de tranh treo o loading qua lau.
+1. When the player becomes ready, the app does **not** autoplay immediately. It calls `cueVideo(videoId, startTime)`.
+2. `PlayerController` listens to `onVideoLoadedFraction()` and `onVideoDuration()`.
+3. Once the estimated buffered content reaches `minBufferedSeconds`, the app calls `play()`.
+4. If YouTube does not deliver enough metadata or callbacks quickly, the app falls back after `maxPreloadWaitMs` to avoid getting stuck on loading for too long.
 
-Gia tri mac dinh hien tai nam trong [`PlaybackPreloadConfig.kt`](../app/src/main/java/com/alex/yang/youtubecompose/player/PlaybackPreloadConfig.kt):
+Current defaults are defined in [`PlaybackPreloadConfig.kt`](../app/src/main/java/com/alex/yang/youtubecompose/player/PlaybackPreloadConfig.kt):
 
 ```kotlin
 PlaybackPreloadConfig(
@@ -209,14 +216,15 @@ PlaybackPreloadConfig(
 )
 ```
 
-Y nghia:
-- `minBufferedSeconds`: so giay muon co truoc khi autoplay.
-- `minBufferedFraction`: fallback khi duration chua co.
-- `maxPreloadWaitMs`: gioi han cho de khong doi qua lau neu callback cua YouTube den cham.
+Meaning:
 
-Day la heuristic de giam hien tuong vua vao video da bi khung hinh dau roi dung lai de buffering. No khong bien IFrame player thanh ExoPlayer, nhung thuong giup trai nghiem on dinh hon.
+- `minBufferedSeconds`: the desired buffered time before autoplay
+- `minBufferedFraction`: fallback threshold when duration is still unknown
+- `maxPreloadWaitMs`: maximum wait before forced playback start
 
-### 6.4 State machine noi bo
+This is a heuristic to reduce the "start immediately, then freeze into buffering" behavior. It does not turn the IFrame player into ExoPlayer, but it often improves startup smoothness.
+
+### 6.4 Internal State Machine
 
 ```mermaid
 stateDiagram-v2
@@ -234,17 +242,18 @@ stateDiagram-v2
     ENDED --> IDLE: onDestroy()
 ```
 
-Map state hien tai cua app:
-- `IDLE`: chua san sang hoac da giai phong
-- `READY`: player da san sang, co the load/phat
-- `BUFFERING`: YouTube dang nap du lieu
-- `PLAYING`: dang phat
-- `PAUSED`: tam dung
-- `ENDED`: phat xong
+Current app-side state meanings:
 
-## 7. Co che fullscreen va xoay man hinh
+- `IDLE`: not ready yet or already released
+- `READY`: initialized and ready for playback commands
+- `BUFFERING`: waiting for more data
+- `PLAYING`: actively playing
+- `PAUSED`: temporarily paused
+- `ENDED`: playback completed
 
-Repo nay khong dung fullscreen toggle co san cua lib. Thay vao do no tu quan ly fullscreen bang orientation va system bars.
+## 7. Fullscreen and Orientation Handling
+
+This repo does not use the library's built-in fullscreen toggle. Instead, fullscreen is managed by the app through orientation and system bars.
 
 ```mermaid
 flowchart TD
@@ -261,117 +270,127 @@ flowchart TD
     K --> E
 ```
 
-Y nghia kien truc:
-- Fullscreen la mot quyet dinh cua app, khong phai cua web player.
-- Player view van la cung mot instance, chi co UI xung quanh thay doi.
-- Cach nay phu hop Compose hon vi app kiem soat toan bo overlay.
+Architectural meaning:
 
-## 8. Tai sao `AndroidView` la diem then chot
+- Fullscreen is an app decision, not a web player decision.
+- The player view remains the same instance. Only the surrounding UI changes.
+- This fits Compose better because the app fully owns the overlay and layout transitions.
 
-`android-youtube-player` cung cap `YouTubePlayerView` theo he View truyen thong.
-Compose khong render truc tiep `View` do, nen repo phai dung:
+## 8. Why `AndroidView` Is Critical
+
+`android-youtube-player` provides `YouTubePlayerView` in the traditional Android View system.
+Compose cannot render it directly, so the repo uses:
 
 ```kotlin
 AndroidView(factory = { playerView })
 ```
 
-Noi cach khac:
-- Player that su van la Android `View`.
-- Compose chi dang host lai `View` nay trong cay UI Compose.
-- Day la ly do `createYouTubePlayerView(...)` va `remember { ... }` la quan trong, de tranh tao lai player moi sau moi lan recomposition.
+In other words:
 
-## 9. Ban chat "custom UI" trong repo nay
+- The actual player is still an Android `View`
+- Compose simply hosts that `View` inside the Compose tree
+- This is why `createYouTubePlayerView(...)` and `remember { ... }` are critical: they prevent creating a new player instance on every recomposition
 
-Repo dang ap dung dung tinh than ma official library khuyen nghi:
-- Tat control mac dinh cua IFrame bang `controls(0)`.
-- Tu viet UI native de len tren player.
-- Dung callback cua player de dong bo UI.
+## 9. Custom UI Strategy in This Repo
 
-Trong repo:
-- Portrait dung `PlayerSlider` va `PlayerButtons`
-- Landscape dung `FullscreenPlayerPanel`
+The repo follows the customization model recommended by the library:
 
-Do do, phan "player" va phan "UI" da tach tuong doi ro:
-- Library chiu trach nhiem render video YouTube va phat callback
-- App chiu trach nhiem UX, layout, fullscreen, gesture, icon, slider
+- Disable the default IFrame controls with `controls(0)`
+- Render a custom native UI on top of the player
+- Keep the custom UI synchronized through player callbacks
 
-## 10. Vong doi va giai phong tai nguyen
+In this repo:
 
-`YouTubePlayerView` duoc add vao lifecycle owner, nen thu vien co the tu xu ly mot phan vong doi.
+- Portrait mode uses `PlayerSlider` and `PlayerButtons`
+- Landscape mode uses `FullscreenPlayerPanel`
 
-Co che hien tai:
-- `createYouTubePlayerView(...)` dang `addObserver(this)` cho `YouTubePlayerView`
-- `VideoScreen` dang `addObserver(controller)` cho `PlayerController`
-- Khi `onDestroy`, `PlayerController` xoa reference `player`, reset state ve `IDLE`
+That means the player layer and the UI layer are clearly separated:
 
-Y nghia:
-- App tranh giu tham chieu player sau khi man hinh bi huy
-- UI quay ve state sach
-- Lifecycle-aware behavior cua library duoc tan dung dung cach
+- The library renders the YouTube video and emits callbacks
+- The app owns UX, layout, fullscreen, gestures, icons, and slider behavior
 
-## 11. Gioi han va danh doi
+## 10. Lifecycle and Resource Cleanup
 
-### 11.1 Diem manh
+`YouTubePlayerView` is attached to the lifecycle owner, so the library can manage part of the lifecycle behavior automatically.
 
-- Tich hop nhanh vao Android app
-- Khong phu thuoc YouTube app tren may nguoi dung
-- De tuy bien UI native
-- Phu hop voi Compose thong qua `AndroidView`
-- Lifecycle-aware, giam kha nang ro ri tai nguyen
+Current mechanism:
 
-### 11.2 Gioi han
+- `createYouTubePlayerView(...)` registers `YouTubePlayerView` as a lifecycle observer
+- `VideoScreen` registers `PlayerController` as a lifecycle observer
+- In `onDestroy`, `PlayerController` clears the player reference and resets state to `IDLE`
 
-- Khong phai native stream player nen khong co muc do kiem soat nhu ExoPlayer
-- Hanh vi phu thuoc vao IFrame player cua YouTube
-- Kha nang custom bi gioi han boi nhung gi IFrame API cho phep
-- Co che preload moi chi la heuristic dua tren `loadedFraction`, khong phai real buffer-length API
-- Cac thao tac doc state co tinh bat dong bo tu nhien
-- Phai tuan thu ToS cua YouTube
+Why it matters:
 
-### 11.3 He qua kien truc cho repo nay
+- The app avoids keeping stale references after the screen is destroyed
+- UI returns to a clean state
+- The lifecycle-aware behavior of the library is used correctly
 
-- `PlayerController` la lop on dinh hoa state cho Compose
-- `StateFlow` la lop cach ly giua web player va UI
-- Chien luoc "xem muot hon" nam o `PlaybackPreloadConfig` va preload gate trong `PlayerController`
-- Fullscreen phai do app tu quan ly
-- Neu sau nay tach thanh reusable library module, `PlayerController` va `createYouTubePlayerView` nen la hat nhan dau tien duoc tach ra
+## 11. Limits and Tradeoffs
 
-## 12. Mau tich hop toi thieu
+### 11.1 Strengths
 
-Neu muon dung lai co che hien tai o screen khac, mau tich hop toi thieu la:
+- Fast integration into an Android app
+- Does not depend on the YouTube app being installed
+- Easy to customize with native UI
+- Works well with Compose through `AndroidView`
+- Lifecycle-aware, reducing the risk of leaks
 
-1. Tao `PlayerController` bang `remember`.
-2. Tao `YouTubePlayerView` bang `remember { createYouTubePlayerView(...) }`.
-3. Dung `AndroidView` de host player.
-4. Dung `collectAsStateWithLifecycle()` de nghe `playbackState`, `currentSecond`, `duration`.
-5. Neu muon doi muc preload, chinh `PlaybackPreloadConfig`.
-6. Tat controls cua IFrame va de UI native cua app len tren.
-7. Neu can fullscreen, de app tu quan ly orientation va system bars.
+### 11.2 Limitations
 
-## 13. De xuat neu muon nang cap thanh library noi bo
+- Not a native stream player, so control is lower than with ExoPlayer
+- Behavior depends on the YouTube IFrame player
+- Customization is limited by what the IFrame API allows
+- The preload mechanism is only a heuristic based on `loadedFraction`, not a real buffer-length API
+- Reading state is naturally asynchronous
+- The app must comply with YouTube Terms of Service
 
-Neu muc tieu tiep theo la bien cum nay thanh "library module" tai su dung trong nhieu app/man hinh, huong tach hop ly la:
-- Tao module moi: `youtube-player-compose`
-- Dua vao do:
+### 11.3 Architectural Consequences
+
+- `PlayerController` acts as the stabilizing layer for Compose state
+- `StateFlow` isolates the UI from the web player
+- The smoother playback strategy lives in `PlaybackPreloadConfig` and the preload gate inside `PlayerController`
+- Fullscreen must be managed by the app
+- If this is later extracted into a reusable internal module, `PlayerController` and `createYouTubePlayerView` should be the first pieces to move
+
+## 12. Minimal Integration Pattern
+
+To reuse the current mechanism in another screen:
+
+1. Create `PlayerController` with `remember`
+2. Create `YouTubePlayerView` with `remember { createYouTubePlayerView(...) }`
+3. Use `AndroidView` to host the player
+4. Observe `playbackState`, `currentSecond`, and `duration` with `collectAsStateWithLifecycle()`
+5. Adjust preload thresholds through `PlaybackPreloadConfig` if needed
+6. Disable the default IFrame controls and render native UI above the player
+7. If fullscreen is needed, let the app own orientation and system bar control
+
+## 13. Suggested Extraction Path for an Internal Library
+
+If the next goal is to turn this cluster into a reusable internal library module across multiple apps or screens, the clean split would be:
+
+- Create a new module: `youtube-player-compose`
+- Move into it:
   - `PlayerController`
   - `PlaybackState`
+  - `PlaybackPreloadConfig`
   - `createYouTubePlayerView`
   - `PlayerSlider`
   - `PlayerButtons`
-  - fullscreen/orientation abstractions
-- Giu `Video` va logic business ben ngoai library
-- Expose API o muc:
+  - fullscreen / orientation abstractions
+- Keep `Video` and business logic outside the reusable module
+- Expose APIs at a level such as:
   - `YoutubePlayerState`
   - `YoutubePlayerActions`
   - `YoutubePlayerScreen(...)`
 
-## 14. Ket luan
+## 14. Conclusion
 
-Repo nay su dung `android-youtube-player` theo dung mo hinh manh nhat cua no:
-- dung `YouTubePlayerView` lam player engine
-- tat web controls
-- viet native Compose UI de dieu khien
-- dong bo state qua `PlayerController` va `StateFlow`
-- de app tu giai bai toan fullscreen, orientation va UX
+This repo uses `android-youtube-player` in the strongest way the library supports:
 
-Ve ban chat, day la mot web-based YouTube player duoc "native hoa" interface, chu khong phai native decoder/player. Toan bo kien truc hien tai cua repo da duoc thiet ke dung theo ban chat do.
+- use `YouTubePlayerView` as the playback engine
+- disable the web controls
+- render a native Compose UI to control playback
+- synchronize state through `PlayerController` and `StateFlow`
+- let the app solve fullscreen, orientation, and UX
+
+At its core, this is a web-based YouTube player with a native-feeling interface, not a native decoder/player pipeline. The current architecture is designed correctly around that reality.

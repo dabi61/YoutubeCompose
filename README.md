@@ -3,14 +3,14 @@
 ## Docs
 
 - Architecture and flow: [docs/youtube-player-architecture.vi.md](docs/youtube-player-architecture.vi.md)
-- Smooth startup preload gate: see section `6.3 Co che preload de xem muot hon` in the architecture doc.
+- Smooth startup preload gate: see section `6.3 Smoother Startup Preload` in the architecture doc
 
-## Giới thiệu dự án
+## Project Overview
 
-Dự án này là một **ứng dụng phát YouTube trên Android**, tích hợp **PierfrancescoSoffritti YouTube Player Library**, trình bày đầy đủ:
+This project is an **Android YouTube playback app** built with the **PierfrancescoSoffritti YouTube Player Library**. It demonstrates:
 
-> **Android + Jetpack Compose + Kiến trúc MVVM + Clean Code**  
-> **Cách triển khai trình phát video tự thích ứng giữa chế độ dọc/ngang với UI được điều khiển bởi StateFlow**
+> **Android + Jetpack Compose + MVVM + Clean Code**  
+> **Adaptive video playback between portrait and landscape layouts with UI driven by StateFlow**
 
 ---
 
@@ -21,348 +21,347 @@ Dự án này là một **ứng dụng phát YouTube trên Android**, tích hợ
 | ![](docs/demo_01.png) |
 | ![](docs/demo_02.png) |
 
-### Tính năng cốt lõi
-* ✅ Phát video YouTube (dựa trên PierfrancescoSoffritti)
-* ✅ Tự động chuyển đổi dọc/ngang và chế độ toàn màn hình
-* ✅ Quản lý trạng thái phát (phát / tạm dừng / đang tải / kết thúc)
-* ✅ Kéo thanh tiến trình và hiển thị thời gian
-* ✅ Tua nhanh / tua lùi 10 giây
-* ✅ Cơ chế tự động ẩn bảng điều khiển
-* ✅ Quản lý vòng đời đầy đủ
+### Core Features
+
+- Play YouTube videos with the PierfrancescoSoffritti player library
+- Automatically switch between portrait, landscape, and fullscreen playback
+- Manage playback state: play, pause, buffering, ended
+- Show playback progress and current time
+- Seek backward and forward by 10 seconds
+- Auto-hide the control overlay
+- Handle lifecycle cleanup correctly
+- Use a startup preload gate to reduce immediate rebuffering when a video first starts
 
 ---
 
-## Điểm nổi bật của dự án
+## Highlights
 
-* ✅ Một `PlayerController` duy nhất quản lý toàn bộ trạng thái phát
-* ✅ Dùng `StateFlow` để cập nhật UI theo kiểu reactive
-* ✅ Hỗ trợ tự động vào chế độ toàn màn hình khi xoay ngang
-* ✅ Giao diện player tùy chỉnh (phong cách Material 3)
-* ✅ Hiệu ứng mượt mà (thanh tiến trình, bảng điều khiển)
-* ✅ Cơ chế xử lý lỗi đầy đủ
-* ✅ Phát hiện hướng vật lý của thiết bị (`OrientationEventListener`)
-* ✅ Ép chuyển hướng màn hình (không bị ảnh hưởng bởi khóa xoay của hệ thống)
+- A single `PlayerController` manages all playback state
+- `StateFlow` keeps the UI reactive and synchronized
+- Fullscreen is triggered automatically when the device rotates to landscape
+- The player UI is fully customized with Material 3
+- Playback startup is smoother thanks to a small preload gate
+- Errors and lifecycle transitions are handled explicitly
+- Physical orientation is detected through `OrientationEventListener`
+- Screen orientation can still be forced even if system auto-rotate is locked
 
 ---
 
-## Công nghệ sử dụng
+## Tech Stack
 
-### Stack công nghệ cốt lõi
-* Kotlin
-* Jetpack Compose (Material 3)
-* Hilt Dependency Injection
-* Coroutine / Flow / StateFlow
-* Navigation Compose
-* Kotlin Serialization
+### Core
 
-### Liên quan đến player
-* PierfrancescoSoffritti YouTube Player 13.0.0
-* AndroidView (Compose Interop)
-* Lifecycle-aware Components
+- Kotlin
+- Jetpack Compose (Material 3)
+- Hilt Dependency Injection
+- Coroutines / Flow / StateFlow
+- Navigation Compose
+- Kotlin Serialization
 
-### Công nghệ UI/UX
-* AnimatedVisibility (Fade In/Out)
-* Custom Slider with Shadow Effect
-* Gesture Detection (chạm để hiện/ẩn control)
-* Adaptive Screen Mode (Portrait/Landscape)
+### Player
+
+- PierfrancescoSoffritti YouTube Player `13.0.0`
+- `AndroidView` for Compose interop
+- Lifecycle-aware components
+
+### UI / UX
+
+- `AnimatedVisibility` with fade in / fade out
+- Custom slider with shadow styling
+- Gesture-based show/hide controls
+- Adaptive portrait / landscape screen mode
 
 ```kotlin
 // --- YouTube Player ---
 implementation("com.pierfrancescosoffritti.androidyoutubeplayer:core:13.0.0")
-````
+```
 
 ---
 
-## Cấu trúc dự án
+## Project Structure
 
 ```text
 com.alex.yang.youtubecompose
-│
-├── player
-│   ├── PlaybackState.kt              # Enum trạng thái phát
-│   ├── PlayerController.kt           # Bộ điều khiển player
-│   └── PlayerFactory.kt              # Factory tạo YouTubePlayerView
-│
-├── presentation
-│   ├── component
-│   │   ├── FullscreenPlayerPanel.kt  # Bảng điều khiển toàn màn hình
-│   │   ├── PlayerSlider.kt           # Thanh tiến trình phát
-│   │   └── PlayerButtons.kt          # Các nút điều khiển phát
-│   │
-│   ├── VideoScreen.kt                # Màn hình phát video chính
-│   └── VideoViewModel.kt             # ViewModel của video
-│
-├── core
-│   └── orientation
-│       └── DeviceUtils.kt            # Công cụ phát hiện hướng thiết bị
-│
-├── domain
-│   └── model
-│       └── Video.kt                  # Model dữ liệu video
-│
-├── features_compose
-│   └── home
-│       └── presentation
-│           └── HomeScreen.kt         # Trang chủ tin tức (danh sách phân loại)
-│
-├── ui
-│   └── theme
-│       └── AlexYoutubeComposeTheme.kt
-│
-└── MainActivity.kt
+|
+|-- player
+|   |-- PlaybackState.kt              # Playback state enum
+|   |-- PlaybackPreloadConfig.kt      # Startup preload tuning
+|   |-- PlayerController.kt           # Player state controller
+|   `-- PlayerFactory.kt              # YouTubePlayerView factory
+|
+|-- presentation
+|   |-- component
+|   |   |-- FullscreenPlayerPanel.kt  # Fullscreen control overlay
+|   |   |-- PlayerSlider.kt           # Playback progress slider
+|   |   `-- PlayerButtons.kt          # Playback control buttons
+|   |
+|   |-- VideoScreen.kt                # Main video screen
+|   `-- VideoViewModel.kt             # Video screen ViewModel
+|
+|-- core
+|   `-- orientation
+|       `-- DeviceUtils.kt            # Device orientation utilities
+|
+|-- domain
+|   `-- model
+|       `-- Video.kt                  # Video data model
+|
+|-- ui
+|   `-- theme
+|       `-- AlexYoutubeComposeTheme.kt
+|
+`-- MainActivity.kt
 ```
 
 ---
 
-## Nguyên tắc thiết kế kiến trúc
+## Architecture Principles
 
-### 1. Nguyên tắc trách nhiệm đơn nhất
+### 1. Single Responsibility
 
-* **PlayerController** - Chỉ tập trung vào quản lý trạng thái player
-* **VideoScreen** - Phụ trách bố cục UI và phát hiện hướng màn hình
-* **FullscreenPlayerPanel** - Xử lý tương tác trong chế độ toàn màn hình
-* **DeviceUtils** - Đóng gói toàn bộ logic phát hiện hướng thiết bị
+- **PlayerController** only manages player state and commands
+- **VideoScreen** handles layout composition and orientation-aware rendering
+- **FullscreenPlayerPanel** handles interactions in fullscreen mode
+- **DeviceUtils** encapsulates physical orientation detection and screen forcing
 
-### 2. Lập trình reactive
+### 2. Reactive UI
 
-* Dùng **StateFlow** để quản lý toàn bộ trạng thái có thể quan sát
-* UI tự động cập nhật qua `collectAsStateWithLifecycle()`
-* Tránh cập nhật UI thủ công, giảm lỗi không đồng bộ trạng thái
+- `StateFlow` holds the observable playback state
+- Compose UI updates automatically with `collectAsStateWithLifecycle()`
+- The UI never reads directly from the player internals
 
-### 3. Nhận biết vòng đời
+### 3. Lifecycle Awareness
 
-* `PlayerController` triển khai `DefaultLifecycleObserver`
-* Tự động xử lý theo vòng đời của Activity/Fragment
-* Ngăn rò rỉ bộ nhớ bằng cách dọn tài nguyên trong `onDestroy`
+- `PlayerController` implements `DefaultLifecycleObserver`
+- Player-related state is cleaned up in `onDestroy`
+- `YouTubePlayerView` is registered with the lifecycle owner
 
-### 4. Tách biệt trách nhiệm
+### 4. Clear Separation of Concerns
 
-* UI không thao tác trực tiếp với `YouTubePlayer`
-* Mọi thao tác phát đều thông qua `PlayerController`
-* Logic phát hiện hướng và logic UI được tách rời hoàn toàn
+- UI never manipulates `YouTubePlayer` directly
+- All player commands flow through `PlayerController`
+- Orientation logic and UI logic remain separated
 
 ---
 
-## Mô tả luồng hoạt động cốt lõi
+## Core Flow
 
-### 1. Luồng khởi tạo player
+### 1. Player initialization flow
 
 ```kotlin
-VideoScreen(video, initSecond) 
-    ↓
-remember { PlayerController() }  // Tạo controller
-    ↓
-remember { createYouTubePlayerView(...) }  // Tạo player
-    ↓
+VideoScreen(video, initSecond)
+    ->
+remember { PlayerController() }  // Create controller
+    ->
+remember { createYouTubePlayerView(...) }  // Create player view
+    ->
 YouTubePlayer.onReady()
-    ↓
-controller.initialize(youTubePlayer)  // Gắn player vào controller
-    ↓
-controller.loadVideo(videoId, initSecond)  // Tải video
+    ->
+controller.initialize(youTubePlayer)  // Attach player to controller
+    ->
+controller.loadVideo(videoId, initSecond)  // Start preload / load flow
 ```
 
-### 2. Luồng cập nhật trạng thái phát
+### 2. Playback state update flow
 
 ```kotlin
 YouTubePlayer.onStateChange(state)
-    ↓
+    ->
 controller.updatePlaybackState(state)
-    ↓
-_playbackState.value = PlaybackState.PLAYING  // Cập nhật StateFlow
-    ↓
-UI collectAsStateWithLifecycle()  // Compose tự động recompose
-    ↓
-Hiển thị icon phát / tạm dừng tương ứng
+    ->
+_playbackState.value = PlaybackState.PLAYING  // Update StateFlow
+    ->
+UI collectAsStateWithLifecycle()  // Compose recomposes automatically
+    ->
+Display the matching play / pause UI state
 ```
 
-### 3. Luồng chuyển đổi dọc/ngang
+### 3. Portrait / landscape switching flow
 
 ```kotlin
-rememberDeviceOrientation()  // Theo dõi hướng vật lý
-    ↓
+rememberDeviceOrientation()  // Track physical device orientation
+    ->
 OrientationEventListener.onOrientationChanged(orientation)
-    ↓
-Xác định góc → DeviceOrientation.LANDSCAPE_LEFT/RIGHT
-    ↓
+    ->
+Resolve angle -> DeviceOrientation.LANDSCAPE_LEFT / RIGHT
+    ->
 isLandscape = true
-    ↓
-Hiển thị LandscapeLayout (chế độ toàn màn hình)
-    ↓
-AdaptiveScreenMode(orientation)  // Điều chỉnh system bars
-    ↓
-Ép Activity sang ngang + ẩn system bars
+    ->
+Show LandscapeLayout (fullscreen mode)
+    ->
+AdaptiveScreenMode(orientation)  // Update system bars and orientation
+    ->
+Force landscape + hide system bars
 ```
 
-### 4. Luồng kéo thanh tiến trình
+### 4. Slider seek flow
 
 ```kotlin
 Slider.onValueChange { newPosition }
-    ↓
-isSeeking = true  // Đánh dấu đang kéo
-seekPosition = newPosition  // Cập nhật vị trí tạm
-    ↓
+    ->
+isSeeking = true  // User is dragging
+seekPosition = newPosition  // Update temporary position
+    ->
 Slider.onValueChangeFinished
-    ↓
-controller.seekTo(seekPosition)  // Thực hiện nhảy đến thời gian mới
-    ↓
-player.seekTo(time)  // Gọi YouTube API
-    ↓
-isSeeking = false  // Kết thúc kéo
+    ->
+controller.seekTo(seekPosition)  // Seek to the new position
+    ->
+player.seekTo(time)  // Call the YouTube player API
+    ->
+isSeeking = false  // Drag finished
 ```
 
 ---
 
-## Quản lý trạng thái player
+## Playback State Management
 
-### Enum `PlaybackState`
+### `PlaybackState`
 
 ```kotlin
 enum class PlaybackState {
-    IDLE,        // Nhàn rỗi (chưa khởi tạo / đã giải phóng)
-    READY,       // Sẵn sàng (có thể bắt đầu phát)
-    BUFFERING,   // Đang tải dữ liệu
-    PLAYING,     // Đang phát
-    PAUSED,      // Tạm dừng
-    ENDED        // Phát xong
+    IDLE,        // Not initialized or already released
+    READY,       // Ready for playback
+    BUFFERING,   // Waiting for media data
+    PLAYING,     // Actively playing
+    PAUSED,      // Temporarily paused
+    ENDED        // Playback finished
 }
 ```
 
-### Các hàm cốt lõi của `PlayerController`
+### Main `PlayerController` APIs
 
-| Hàm                             | Mô tả                                  |
-| ------------------------------- | -------------------------------------- |
-| `initialize(youTubePlayer)`     | Khởi tạo instance player               |
-| `loadVideo(videoId, startTime)` | Tải video được chỉ định                |
-| `play()`                        | Bắt đầu phát                           |
-| `pause()`                       | Tạm dừng phát                          |
-| `replay()`                      | Phát lại từ đầu                        |
-| `seekTo(time)`                  | Nhảy đến thời điểm chỉ định            |
-| `seekBackward(seconds)`         | Tua lùi (mặc định 10 giây)             |
-| `seekForward(seconds)`          | Tua nhanh (mặc định 10 giây)           |
-| `updateCurrentSecond(second)`   | Cập nhật thời gian hiện tại (callback) |
-| `updateDuration(duration)`      | Cập nhật tổng thời lượng (callback)    |
-| `updatePlaybackState(state)`    | Cập nhật trạng thái phát (callback)    |
+| Function | Description |
+| --- | --- |
+| `initialize(youTubePlayer)` | Stores the player instance |
+| `loadVideo(videoId, startTime)` | Starts the startup preload / cue flow |
+| `play()` | Resumes playback |
+| `pause()` | Pauses playback |
+| `replay()` | Seeks back to the beginning and plays |
+| `seekTo(time)` | Jumps to a specific time |
+| `seekBackward(seconds)` | Rewinds, default 10 seconds |
+| `seekForward(seconds)` | Fast-forwards, default 10 seconds |
+| `updateCurrentSecond(second)` | Syncs current playback time |
+| `updateDuration(duration)` | Syncs total duration |
+| `updateLoadedFraction(loadedFraction)` | Syncs how much content is buffered |
+| `updatePlaybackState(state)` | Maps YouTube state to app state |
 
 ---
 
-## Phát hiện hướng và điều khiển toàn màn hình
+## Orientation and Fullscreen Handling
 
-### 1. Phát hiện hướng vật lý
+### 1. Physical orientation detection
 
-Dùng `OrientationEventListener` để lắng nghe góc của thiết bị:
+`OrientationEventListener` is used to resolve the device angle into semantic orientation:
 
 ```kotlin
-0° ± 45°    → PORTRAIT          (màn hình dọc)
-90° ± 45°   → LANDSCAPE_RIGHT   (màn hình ngang bên phải)
-180° ± 45°  → PORTRAIT_REVERSE  (dọc ngược)
-270° ± 45°  → LANDSCAPE_LEFT    (màn hình ngang bên trái)
+0° ± 45°    -> PORTRAIT
+90° ± 45°   -> LANDSCAPE_RIGHT
+180° ± 45°  -> PORTRAIT_REVERSE
+270° ± 45°  -> LANDSCAPE_LEFT
 ```
 
-### 2. Chế độ màn hình thích ứng
+### 2. Adaptive screen mode
 
 ```kotlin
 AdaptiveScreenMode(orientation)
 ```
 
-**Khi ở ngang:**
+In landscape:
 
-1. Ép Activity chuyển sang chế độ ngang
-2. Ẩn thanh trạng thái và thanh điều hướng (toàn màn hình)
-3. Cho phép vuốt cạnh để tạm hiện system bars
+1. Force the activity into landscape
+2. Hide the status and navigation bars
+3. Allow transient system bars with edge swipe
 
-**Khi ở dọc:**
+In portrait:
 
-1. Ép Activity chuyển sang chế độ dọc
-2. Hiện thanh trạng thái và thanh điều hướng như bình thường
+1. Force the activity into portrait
+2. Show system bars normally
 
-### 3. Thoát toàn màn hình thủ công
+### 3. Manual exit from fullscreen
 
 ```kotlin
 context.forcePortraitOrientation()
 ```
 
-Dùng khi bấm nút “thoát toàn màn hình” để ép quay về màn hình dọc.
+Used by the fullscreen exit button to return the app to portrait mode.
 
 ---
 
-## Cấu hình YouTube Player
+## YouTube Player Configuration
 
 ### `IFramePlayerOptions`
 
 ```kotlin
 IFramePlayerOptions.Builder(context)
-    .controls(0)       // Ẩn điều khiển gốc
-    .rel(0)            // Không hiển thị video liên quan khi phát xong
-    .ccLoadPolicy(0)   // Không tự động tải phụ đề
+    .controls(0)       // Hide the default web controls
+    .rel(0)            // Do not show unrelated videos after playback
+    .ccLoadPolicy(0)   // Do not auto-load captions
     .build()
 ```
 
-### Callback lắng nghe
+### Main callbacks
 
 ```kotlin
 AbstractYouTubePlayerListener()
-    .onReady()              // Player đã sẵn sàng
-    .onCurrentSecond()      // Cập nhật thời gian hiện tại mỗi giây
-    .onVideoDuration()      // Lấy tổng thời lượng video
-    .onStateChange()        // Trạng thái phát thay đổi
-    .onError()              // Lỗi phát video
+    .onReady()              // Player is ready
+    .onCurrentSecond()      // Current playback time callback
+    .onVideoDuration()      // Total video duration callback
+    .onStateChange()        // Playback state changed
+    .onError()              // Playback error callback
 ```
 
 ---
 
-## Hướng mở rộng trong tương lai
+## Future Improvements
 
-### Mở rộng tính năng
+### Feature ideas
 
-* 🔹 Điều chỉnh tốc độ phát (0.25x ~ 2x)
-* 🔹 Chọn chất lượng video (Auto / 720p / 1080p)
-* 🔹 Bật/tắt phụ đề và chọn ngôn ngữ
-* 🔹 Tính năng lưu video yêu thích
-* 🔹 Cast lên TV
+- Playback speed control (`0.25x` to `2x`)
+- Manual quality selection (`Auto / 720p / 1080p`)
+- Caption toggle and language selection
+- Favorite / save video functionality
+- TV casting
 
-### Tối ưu kỹ thuật
+### Technical improvements
 
-* 🔹 Tải trước video tiếp theo
-* 🔹 Quản lý pool instance player
-* 🔹 Theo dõi trạng thái mạng (tự điều chỉnh chất lượng)
-* 🔹 Chiến lược retry khi gặp lỗi
+- Preload the next video
+- Manage a pool of player instances
+- Monitor network state and adapt quality heuristics
+- Add retry strategies for playback errors
 
-### Cải thiện UI/UX
+### UI / UX improvements
 
-* 🔹 Điều khiển bằng cử chỉ (vuốt chỉnh âm lượng / độ sáng)
-* 🔹 Double tap để tua nhanh / tua lùi
-* 🔹 Nhấn giữ để phát tốc độ cao
+- Gesture controls for volume and brightness
+- Double-tap to rewind / fast-forward
+- Press-and-hold for temporary speed boost
 
 ---
 
-## Giấy phép và tham chiếu
+## License and References
 
 ### YouTube Player Library
 
-Dự án này sử dụng [PierfrancescoSoffritti/android-youtube-player](https://github.com/PierfrancescoSoffritti/android-youtube-player)
+This project uses [PierfrancescoSoffritti/android-youtube-player](https://github.com/PierfrancescoSoffritti/android-youtube-player)
 
-Giấy phép: MIT License
+License: MIT
 
-### Giới hạn khi dùng YouTube API
+### YouTube API limitations
 
-* Phải tuân thủ [YouTube Terms of Service](https://www.youtube.com/t/terms)
-* Không được tải video
-* Không được loại bỏ quảng cáo
-* Phải giữ nhận diện thương hiệu YouTube
+- Must comply with the [YouTube Terms of Service](https://www.youtube.com/t/terms)
+- Video download is not allowed
+- Ad removal is not allowed
+- YouTube branding requirements must be respected
 
 ---
 
-## Tác giả
+## Author
 
-**Alex Yang**
-Senior Android Engineer
+**Alex Yang**  
+Senior Android Engineer  
 GitHub: [https://github.com/m9939418](https://github.com/m9939418)
 
 ---
 
-## ⭐ Nếu dự án này hữu ích với bạn, hãy cho một Star nhé
+## Support
 
-```
-
-Nếu bạn muốn, mình có thể làm luôn bản **trau chuốt lại cho tự nhiên hơn kiểu README tiếng Việt dành cho GitHub**, không chỉ dịch sát nghĩa mà còn đọc mượt hơn.
-```
+If this project is useful to you, consider giving it a star.
